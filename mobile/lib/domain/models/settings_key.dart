@@ -21,6 +21,9 @@ enum SettingsKey<T> {
   // Viewer
   viewerLoopVideo<bool>(),
   viewerLoadOriginalVideo<bool>(),
+  viewerOriginalVideoOnWifi<bool>(),
+  viewerOriginalVideoOnCellular<bool>(),
+  viewerOriginalVideoRequireLan<bool>(),
   viewerAutoPlayVideo<bool>(),
   viewerTapToNavigate<bool>(),
 
