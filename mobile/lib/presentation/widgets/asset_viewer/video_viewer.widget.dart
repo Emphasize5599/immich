@@ -13,8 +13,10 @@ import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.pro
 import 'package:immich_mobile/providers/asset_viewer/video_player_provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/asset.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/services/api.service.dart';
+import 'package:immich_mobile/utils/video_original_policy.dart';
 import 'package:logging/logging.dart';
 import 'package:native_video_player/native_video_player.dart';
 
@@ -158,7 +160,24 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
         return null;
       }
 
-      final isOriginalVideo = ref.read(appConfigProvider).viewer.loadOriginalVideo;
+      final viewerConfig = ref.read(appConfigProvider).viewer;
+      final localEndpoint = ref.read(appConfigProvider).network.localEndpoint;
+      final isLocalConnection = isLocalEndpoint(serverEndpoint, localEndpoint);
+      final capabilities = await ref.read(connectivityApiProvider).getCapabilities();
+      if (!mounted) {
+        return null;
+      }
+      final isOriginalVideo = shouldUseOriginalVideo(
+        forceOriginalVideo: viewerConfig.loadOriginalVideo,
+        originalOnWifi: viewerConfig.originalVideoOnWifi,
+        originalOnCellular: viewerConfig.originalVideoOnCellular,
+        requireLan: viewerConfig.originalVideoRequireLan,
+        capabilities: capabilities,
+        isLocalConnection: isLocalConnection,
+      );
+      _log.fine(
+        'video source decision: original=$isOriginalVideo capabilities=$capabilities isLocalConnection=$isLocalConnection',
+      );
       final String postfixUrl = isOriginalVideo ? 'original' : 'video/playback';
       final String assetId = remoteAsset.livePhotoVideoId ?? remoteAsset.id;
       final String videoUrl = '$serverEndpoint/assets/$assetId/$postfixUrl';

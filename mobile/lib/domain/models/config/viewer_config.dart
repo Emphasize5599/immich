@@ -8,6 +8,9 @@ abstract class ViewerConfig with _$ViewerConfig {
   const factory ViewerConfig({
     @Default(true) bool loopVideo,
     @Default(false) bool loadOriginalVideo,
+    @Default(true) bool originalVideoOnWifi,
+    @Default(false) bool originalVideoOnCellular,
+    @Default(false) bool originalVideoRequireLan,
     @Default(true) bool autoPlayVideo,
     @Default(false) bool tapToNavigate,
   }) = _ViewerConfig;

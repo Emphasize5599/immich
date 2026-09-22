@@ -16,6 +16,9 @@ class VideoViewerSettings extends HookConsumerWidget {
     final useAutoPlayVideo = useState(viewer.autoPlayVideo);
     final useLoopVideo = useState(viewer.loopVideo);
     final useOriginalVideo = useState(viewer.loadOriginalVideo);
+    final useOriginalVideoOnWifi = useState(viewer.originalVideoOnWifi);
+    final useOriginalVideoOnCellular = useState(viewer.originalVideoOnCellular);
+    final useOriginalVideoRequireLan = useState(viewer.originalVideoRequireLan);
 
     useValueChanged<bool, void>(useAutoPlayVideo.value, (_, _) {
       unawaited(ref.read(settingsProvider).write(.viewerAutoPlayVideo, useAutoPlayVideo.value));
@@ -25,6 +28,15 @@ class VideoViewerSettings extends HookConsumerWidget {
     });
     useValueChanged<bool, void>(useOriginalVideo.value, (_, _) {
       unawaited(ref.read(settingsProvider).write(.viewerLoadOriginalVideo, useOriginalVideo.value));
+    });
+    useValueChanged<bool, void>(useOriginalVideoOnWifi.value, (_, _) {
+      unawaited(ref.read(settingsProvider).write(.viewerOriginalVideoOnWifi, useOriginalVideoOnWifi.value));
+    });
+    useValueChanged<bool, void>(useOriginalVideoOnCellular.value, (_, _) {
+      unawaited(ref.read(settingsProvider).write(.viewerOriginalVideoOnCellular, useOriginalVideoOnCellular.value));
+    });
+    useValueChanged<bool, void>(useOriginalVideoRequireLan.value, (_, _) {
+      unawaited(ref.read(settingsProvider).write(.viewerOriginalVideoRequireLan, useOriginalVideoRequireLan.value));
     });
 
     return Column(
@@ -45,6 +57,24 @@ class VideoViewerSettings extends HookConsumerWidget {
           valueNotifier: useOriginalVideo,
           title: context.t.setting_video_viewer_original_video_title,
           subtitle: context.t.setting_video_viewer_original_video_subtitle,
+        ),
+        SettingsSwitchListTile(
+          enabled: useOriginalVideo.value,
+          valueNotifier: useOriginalVideoOnWifi,
+          title: context.t.setting_video_viewer_original_video_on_wifi_title,
+          subtitle: context.t.setting_video_viewer_original_video_on_wifi_subtitle,
+        ),
+        SettingsSwitchListTile(
+          enabled: useOriginalVideo.value,
+          valueNotifier: useOriginalVideoOnCellular,
+          title: context.t.setting_video_viewer_original_video_on_cellular_title,
+          subtitle: context.t.setting_video_viewer_original_video_on_cellular_subtitle,
+        ),
+        SettingsSwitchListTile(
+          enabled: useOriginalVideo.value,
+          valueNotifier: useOriginalVideoRequireLan,
+          title: context.t.setting_video_viewer_original_video_require_lan_title,
+          subtitle: context.t.setting_video_viewer_original_video_require_lan_subtitle,
         ),
       ],
     );
