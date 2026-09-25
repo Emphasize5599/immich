@@ -217,27 +217,6 @@ void main() {
     expect(websocket.connectCount, 1);
   });
 
-  test('hidden then resume is not skipped (hidden must count as a pause)', () async {
-    // Regression: on modern Android, backgrounding the app commonly only reaches
-    // `hidden`, not `paused`. If `handleAppHidden` doesn't mark the app as having
-    // paused, the next resume thinks nothing happened and skips re-resolving the
-    // network endpoint (and all other resume work) entirely.
-    container.listen(memoryLaneProvider, (_, _) {});
-    expect(memoryLaneBuilds, 1);
-    // Establish this test's own websocket instance before mutating it, since
-    // (unlike the other tests) handleAppHidden never reads websocketProvider.
-    container.read(websocketProvider.notifier);
-
-    lifeCycle.handleAppHidden();
-    websocket.throwOnConnect = false;
-    serverVersion.complete();
-    await lifeCycle.handleAppResume();
-    await Future<void>.delayed(Duration.zero);
-
-    expect(serverVersionCount, 1);
-    expect(memoryLaneBuilds, 2);
-  });
-
   test('resume re-queries the memory lane', () async {
     container.listen(memoryLaneProvider, (_, _) {});
     expect(memoryLaneBuilds, 1);

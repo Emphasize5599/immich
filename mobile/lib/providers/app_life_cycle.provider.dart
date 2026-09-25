@@ -227,11 +227,7 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
 
   void handleAppHidden() {
     state = AppLifeCycleEnum.hidden;
-    // On modern Android, backgrounding the app (home button, app switcher) commonly
-    // only reaches `hidden`, never `paused`. Without this, `_wasPaused` never flips
-    // true, so the next resume skips network-endpoint re-resolution and other
-    // resume work entirely.
-    _wasPaused = true;
+    // do not stop/clean up anything on inactivity: issued on every orientation change
   }
 }
 
