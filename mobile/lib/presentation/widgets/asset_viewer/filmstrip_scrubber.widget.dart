@@ -88,6 +88,13 @@ class _FilmstripScrubberState extends State<FilmstripScrubber> {
   // repeated flicks never trigger it in between.
   static const _settleDelay = Duration(milliseconds: 300);
 
+  // Duration/curve for animateTo when locking onto a thumbnail after a scrub
+  // ends. Only used for that short final correction - live tracking while a
+  // finger or the main pager is actively driving the strip always jumps
+  // instantly instead, since animating there would lag behind the gesture.
+  static const _settleAnimationDuration = Duration(milliseconds: 200);
+  static const _settleAnimationCurve = Curves.easeOutCubic;
+
   final _scrollController = ScrollController();
   List<BaseAsset> _assets = [];
   var _firstIndex = 0;
@@ -204,7 +211,7 @@ class _FilmstripScrubberState extends State<FilmstripScrubber> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // A new scrub may have started while we were awaiting; don't fight it.
       if (!_isScrubbing) {
-        _centerThumbnail(widget.currentIndex);
+        _centerThumbnail(widget.currentIndex, animate: true);
       }
     });
   }
@@ -217,13 +224,21 @@ class _FilmstripScrubberState extends State<FilmstripScrubber> {
     return _assets[local];
   }
 
-  void _centerThumbnail(int index) {
+  void _centerThumbnail(int index, {bool animate = false}) {
     if (!_scrollController.hasClients) {
       return;
     }
     // The list's own leading padding already centers item 0 at offset 0,
     // so the target offset for a given item is just its content position.
     final target = (index * _itemExtent).clamp(0.0, _scrollController.position.maxScrollExtent);
+    // A big jump (e.g. tapping a thumbnail far from the current one) would
+    // look wrong animated - crawling the length of the strip instead of
+    // just getting there. Only animate the short final correction onto a
+    // thumbnail after a scrub ends; anything further snaps instantly.
+    if (animate && (target - _scrollController.offset).abs() <= _itemExtent * 4) {
+      unawaited(_scrollController.animateTo(target, duration: _settleAnimationDuration, curve: _settleAnimationCurve));
+      return;
+    }
     _scrollController.jumpTo(target);
   }
 
@@ -243,7 +258,7 @@ class _FilmstripScrubberState extends State<FilmstripScrubber> {
       // (it awaits an asset load first), so it can still lag behind what we
       // already reported via onSelected, which would otherwise snap the strip
       // back to wherever it was before this scrub started.
-      _centerThumbnail(index);
+      _centerThumbnail(index, animate: true);
     }
   }
 

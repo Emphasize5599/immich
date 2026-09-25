@@ -138,7 +138,13 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   Stream<ImageInfo> _codec(RemoteFullImageProvider key, ImageDecoderCallback decode) async* {
     yield* initialImageStream();
 
-    if (isCancelled || key.deferFullResolution) {
+    final loadOriginal = assetType == AssetType.image && SettingsRepository.instance.appConfig.image.loadOriginal;
+
+    // "Load original" exists specifically so photos are always shown at full
+    // quality, including to compare them while scrubbing - deferring it here
+    // would defeat the setting's whole purpose. Everything else still defers
+    // under scrub pressure.
+    if (isCancelled || (key.deferFullResolution && !loadOriginal)) {
       return;
     }
 
@@ -150,7 +156,6 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
         edited: key.edited,
       ),
     );
-    final loadOriginal = assetType == AssetType.image && SettingsRepository.instance.appConfig.image.loadOriginal;
     yield* loadRequest(previewRequest, decode, isFinal: !loadOriginal);
 
     if (!loadOriginal) {
