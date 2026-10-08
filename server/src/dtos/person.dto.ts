@@ -10,6 +10,7 @@ import { UserResponseSchema, mapUser } from 'src/dtos/user.dto.js';
 import { SharingDirectionSchema, SourceTypeSchema } from 'src/enum.js';
 import { AssetFaceTable } from 'src/schema/tables/asset-face.table.js';
 import { asDateString, asDateTimeString } from 'src/utils/date.js';
+import { hasSomeDefined } from 'src/utils/misc.js';
 import { transformFaceBoundingBox } from 'src/utils/transform.js';
 import { hexColor, stringToBool, uniqueIds } from 'src/validation.js';
 
@@ -29,10 +30,17 @@ const PersonCreateSchema = z
   })
   .meta({ id: 'PersonCreateDto' });
 
-const PersonUpdateSchema = PersonCreateSchema.extend({
+const PersonUpdateBaseSchema = PersonCreateSchema.extend({
   featureFaceAssetId: z.uuidv4().optional().describe('Asset ID used for feature face thumbnail'),
-  userId: z.uuid().optional().describe('User ID'),
-}).meta({ id: 'PersonUpdateDto' });
+});
+
+const PersonUpdateSchema = PersonUpdateBaseSchema.extend({
+  userId: z.uuid().optional().describe('Restrict the update to the person record of this User ID'),
+})
+  .refine((dto) => Object.entries(dto).some(([key, value]) => key !== 'userId' && value !== undefined), {
+    message: `At least one of the following fields is required: ${Object.keys(PersonUpdateBaseSchema.shape).join(', ')}`,
+  })
+  .meta({ id: 'PersonUpdateDto' });
 
 const PeopleUpdateItemSchema = PersonUpdateSchema.extend({
   id: z.uuidv4().describe('Person ID'),
@@ -61,6 +69,7 @@ const PersonSearchSchema = z
     sharedWithId: z.uuid().optional().describe('Only include people to which the user was given access'),
     isFavorite: stringToBool.optional().describe('Filter by favorite status'),
     isHidden: stringToBool.optional().describe('Filter by hidden status'),
+    name: z.string().optional().describe('Filter by person name'),
   })
   .meta({ id: 'PersonSearchDto' });
 
@@ -74,6 +83,15 @@ const PersonUserRoleSchema = z
   .enum(PersonUserRole)
   .describe('Levels of access for managing people resources on behalf of another user.')
   .meta({ id: 'PersonUserRole' });
+
+export enum PeopleUsersUpsertType {
+  Everyone = 'everyone',
+}
+
+const PeopleUsersUpsertTypeSchema = z
+  .enum(PeopleUsersUpsertType)
+  .describe('Which people to update when personIds is omitted')
+  .meta({ id: 'PeopleUsersUpsertType' });
 
 const PersonOtherResponseSchema = z
   .object({
@@ -220,13 +238,18 @@ const PersonUsersSearchSchema = z
   })
   .meta({ id: 'PersonUsersSearchDto' });
 
-const PersonUsersCreateSchema = z
+const PeopleUsersUpsertSchema = z
   .object({
-    personIds: uniqueIds.describe('Person IDs'),
+    personIds: uniqueIds.optional().describe('Person IDs, required when type is omitted'),
+    type: PeopleUsersUpsertTypeSchema.optional(),
     sharedWithIds: uniqueIds.describe('User IDs that should be given access to the person'),
     role: PersonUserRoleSchema.describe('Role that should be applied'),
   })
-  .meta({ id: 'PersonUsersCreateDto' });
+  .refine((data) => hasSomeDefined([data.personIds, data.type]), {
+    error: 'Either personIds or type must be provided',
+    path: ['personIds'],
+  })
+  .meta({ id: 'PeopleUsersUpsertDto' });
 
 const PersonUsersDeleteSchema = z
   .array(
@@ -245,7 +268,7 @@ export class AssetFaceDeleteDto extends createZodDto(AssetFaceDeleteSchema) {}
 export class PersonStatisticsResponseDto extends createZodDto(PersonStatisticsResponseSchema) {}
 export class PersonUsersResponseDto extends createZodDto(PersonUsersResponseSchema) {}
 export class PersonUsersSearchDto extends createZodDto(PersonUsersSearchSchema) {}
-export class PersonUsersCreateDto extends createZodDto(PersonUsersCreateSchema) {}
+export class PeopleUsersUpsertDto extends createZodDto(PeopleUsersUpsertSchema) {}
 export class PersonUsersDeleteDto extends createZodDto(PersonUsersDeleteSchema) {}
 
 const PeopleResponseSchema = z
