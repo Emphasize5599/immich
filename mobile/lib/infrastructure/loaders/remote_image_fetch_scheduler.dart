@@ -49,7 +49,8 @@ class RemoteImageFetchScheduler {
   /// running. Generous on purpose - this is a last-resort safety net, not a
   /// normal-path timeout, so it shouldn't fire for any request that's merely
   /// slow on a bad connection.
-  static const _fetchTimeout = Duration(seconds: 20);
+  static const _defaultFetchTimeout = Duration(seconds: 20);
+  static var _fetchTimeout = _defaultFetchTimeout;
 
   /// Test-only: read-only visibility into the tuning constants above, so
   /// tests assert against the real values instead of duplicating them (and
@@ -60,6 +61,16 @@ class RemoteImageFetchScheduler {
   static int get maxQueueDepthForTesting => _maxQueueDepth;
   @visibleForTesting
   static Duration get fetchTimeoutForTesting => _fetchTimeout;
+
+  /// Test-only: shrinks the safety-net timeout so a test that deliberately
+  /// leaves a fetch in flight (to assert on its still-pending state) can pump
+  /// the fake test clock past it and let the scheduler's own timer resolve,
+  /// instead of leaving a real Timer scheduled 20 seconds past the test's end.
+  /// Call [resetFetchTimeoutForTesting] afterwards to restore the default.
+  @visibleForTesting
+  static set fetchTimeoutForTesting(Duration value) => _fetchTimeout = value;
+  @visibleForTesting
+  static void resetFetchTimeoutForTesting() => _fetchTimeout = _defaultFetchTimeout;
 
   var _inFlight = 0;
   final _queue = <_QueuedFetch>[];
