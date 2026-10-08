@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
+import 'package:immich_mobile/platform/connectivity_api.g.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/video_viewer.widget.dart';
+import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/storage.provider.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:native_video_player/native_video_player.dart';
@@ -13,9 +15,12 @@ import '../../../unit/factories/local_asset_factory.dart';
 import '../../../unit/factories/remote_asset_factory.dart';
 import '../../../unit/presentation/presentation_context.dart';
 
+class MockConnectivityApi extends Mock implements ConnectivityApi {}
+
 void main() {
   late PresentationContext context;
   late MockStorageRepository storage;
+  late MockConnectivityApi connectivityApi;
 
   final local = LocalAssetFactory.create(id: 'local-1').copyWith(type: .video, playbackStyle: .video);
   final remote = RemoteAssetFactory.create(type: .video, localId: local.id);
@@ -23,6 +28,8 @@ void main() {
   setUp(() async {
     context = await PresentationContext.create();
     storage = MockStorageRepository();
+    connectivityApi = MockConnectivityApi();
+    when(() => connectivityApi.getCapabilities()).thenAnswer((_) async => [NetworkCapability.wifi]);
     final assets = context.service.asset.service;
     when(() => assets.getAsset(remote)).thenAnswer((_) async => remote);
     when(() => assets.getAsset(local)).thenAnswer((_) async => local);
@@ -37,7 +44,10 @@ void main() {
     await tester.pumpTestWidget(
       context,
       NativeVideoViewer(asset: asset, image: const SizedBox()),
-      overrides: [storageRepositoryProvider.overrideWithValue(storage)],
+      overrides: [
+        storageRepositoryProvider.overrideWithValue(storage),
+        connectivityApiProvider.overrideWithValue(connectivityApi),
+      ],
       expectSettle: false,
     );
     return tester.state<NativeVideoViewerState>(find.byType(NativeVideoViewer)).videoSource;

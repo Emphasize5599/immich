@@ -15,6 +15,7 @@ import 'package:immich_mobile/domain/services/store.service.dart';
 import 'package:immich_mobile/generated/codegen_loader.g.dart';
 import 'package:immich_mobile/infrastructure/repositories/settings.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/store.repository.dart';
+import 'package:immich_mobile/platform/remote_image_api.g.dart';
 import 'package:immich_mobile/presentation/actions/action.dart';
 import 'package:immich_mobile/presentation/actions/action.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
@@ -100,6 +101,20 @@ class PresentationContext {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
       SystemChannels.platform,
       (call) async => null,
+    );
+
+    // Resolve remote image loads to "no image" immediately by default, rather than leaving
+    // the real platform channel unanswered. RemoteImageFetchScheduler deliberately never
+    // cancels an in-flight fetch (cancelling native Cronet requests mid-flight has caused
+    // crashes) and instead relies on a 20-second safety-net timeout, so any test that renders
+    // a remote image without this would leave a real Timer pending past the widget's disposal.
+    // Tests asserting on actual image bytes provide their own handler on top of this default.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockDecodedMessageHandler(
+      const BasicMessageChannel<Object?>(
+        'dev.flutter.pigeon.immich_mobile.RemoteImageApi.requestImage',
+        RemoteImageApi.pigeonChannelCodec,
+      ),
+      (message) async => <Object?>[null],
     );
   }
 
